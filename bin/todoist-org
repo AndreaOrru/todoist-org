@@ -1,0 +1,29 @@
+#!/usr/bin/env python
+
+import click
+
+from todoist_org import commands
+
+
+@click.group()
+def cli():
+    """(Todoist <=> Org file) synchronization."""
+    pass
+
+
+@cli.command()
+@click.argument('org_file')
+def download(org_file):
+    """Download from Todoist to Org file."""
+    commands.download(org_file)
+
+
+@cli.command()
+@click.argument('org_file')
+def upload(org_file):
+    """Upload from Org file to Todoist."""
+    commands.upload(org_file)
+
+
+if __name__ == '__main__':
+    cli()

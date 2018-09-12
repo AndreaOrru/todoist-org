@@ -30,7 +30,10 @@ def download(filename):
 
 def upload(filename):
     base = PyOrgMode.OrgDataStructure()
-    base.load_from_file(filename)
+    try:
+        base.load_from_file(filename)
+    except FileNotFoundError:
+        return
 
     orgItems = items.from_org(base.root.content)
 

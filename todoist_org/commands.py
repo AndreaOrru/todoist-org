@@ -33,7 +33,21 @@ def upload(filename):
     base.load_from_file(filename)
 
     orgItems = items.from_org(base.root.content)
-    doneItems = (x for x in orgItems if x.done)
 
+    doneItems = (x for x in orgItems if x.done)
     api.items.complete([x.id for x in doneItems])
+
+    newItems = (x for x in orgItems if x.id is None)
+    for newItem in newItems:
+        api.items.add(
+            newItem.description,
+            newItem.project_id,
+            priority=newItem.priority,
+            due_date_utc=newItem.due_date)
+
     api.commit()
+
+
+def sync(filename):
+    upload(filename)
+    download(filename)

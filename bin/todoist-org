@@ -25,5 +25,12 @@ def upload(org_file):
     commands.upload(org_file)
 
 
+@cli.command()
+@click.argument('org_file')
+def sync(org_file):
+    """Sync Org file and Todoist."""
+    commands.sync(org_file)
+
+
 if __name__ == '__main__':
     cli()

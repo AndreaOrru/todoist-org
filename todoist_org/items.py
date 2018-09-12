@@ -1,3 +1,6 @@
+from datetime import datetime as dt
+from time import mktime
+
 from bidict import bidict
 from dateparser import parse as dateparse
 from PyOrgMode import PyOrgMode
@@ -13,12 +16,18 @@ class Item:
                  priority,
                  done,
                  due_date=None):
-        self.project_id = int(project_id)
-        self.id = int(item_id)
+        self.project_id = project_id
+        self.id = None if (item_id is None) else int(item_id)
         self.description = description
         self.priority = priority
         self.done = done
-        self.due_date = None if (due_date is None) else dateparse(due_date)
+        if due_date is None:
+            self.due_date = None
+        else:
+            if isinstance(due_date, str):
+                self.due_date = dateparse(due_date)
+            else:
+                self.due_date = due_date
 
     @classmethod
     def from_todoist(cls, todoist_item):
@@ -28,10 +37,16 @@ class Item:
 
     @classmethod
     def from_org(cls, org_item):
-        return cls(
-            cls.get_org_prop(org_item.parent, 'ID'),
-            cls.get_org_prop(org_item, 'ID'), org_item.heading,
-            cls.priority_dict.inv[org_item.priority], org_item.todo == 'DONE')
+        project_id = cls.get_org_prop(org_item.parent, 'ID')
+        item_id = cls.get_org_prop(org_item, 'ID')
+        description = org_item.heading
+        priority = cls.priority_dict.inv[org_item.priority]
+        due_date = cls.get_org_deadline(org_item)
+        try:
+            done = org_item.todo == 'DONE'
+        except AttributeError:
+            done = False
+        return cls(project_id, item_id, description, priority, done, due_date)
 
     def to_org(self):
         elem = PyOrgMode.OrgNode.Element()
@@ -54,12 +69,25 @@ class Item:
 
     @staticmethod
     def get_org_prop(org_item, prop_name):
-        properties = next(
-            x for x in org_item.content
-            if isinstance(x, PyOrgMode.OrgDrawer.Element)
-            and x.name == 'PROPERTIES').content
+        try:
+            properties = next(
+                x for x in org_item.content
+                if isinstance(x, PyOrgMode.OrgDrawer.Element)
+                and x.name == 'PROPERTIES').content
 
-        return next(x.value for x in properties if x.name == prop_name)
+            return next(x.value for x in properties if x.name == prop_name)
+        except StopIteration:
+            return None
+
+    @staticmethod
+    def get_org_deadline(org_item):
+        try:
+            sched = next(
+                x for x in org_item.content
+                if isinstance(x, PyOrgMode.OrgSchedule.Element))
+            return dt.utcfromtimestamp(mktime(sched.deadline.value))
+        except StopIteration:
+            return None
 
 
 def from_todoist(todoist_items):

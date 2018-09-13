@@ -17,7 +17,7 @@ class Item:
                  done,
                  due_date=None):
         self.project_id = project_id
-        self.id = None if (item_id is None) else int(item_id)
+        self.id = item_id
         self.description = description
         self.priority = priority
         self.done = done
@@ -31,9 +31,14 @@ class Item:
 
     @classmethod
     def from_todoist(cls, todoist_item):
+        try:
+            done = todoist_item['checked'] == 1
+        except KeyError:
+            done = False
+
         return cls(todoist_item['project_id'], todoist_item['id'],
-                   todoist_item['content'], todoist_item['priority'],
-                   todoist_item['checked'] == 1, todoist_item['due_date_utc'])
+                   todoist_item['content'], todoist_item['priority'], done,
+                   todoist_item['due_date_utc'])
 
     @classmethod
     def from_org(cls, org_item):
@@ -86,11 +91,20 @@ class Item:
                 x for x in org_item.content
                 if isinstance(x, PyOrgMode.OrgSchedule.Element))
             return dt.utcfromtimestamp(mktime(sched.deadline.value))
-        except StopIteration:
+        except (AttributeError, StopIteration):
             return None
 
 
-def from_todoist(todoist_items):
+def from_todoist(todoist_items, only_todo=True):
+    if only_todo:
+        todo_items = []
+        for item in todoist_items:
+            try:
+                if item['checked'] == 0:
+                    todo_items.append(item)
+            except KeyError:
+                todo_items.append(item)
+        todoist_items = todo_items
     return (Item.from_todoist(x) for x in todoist_items)
 
 
